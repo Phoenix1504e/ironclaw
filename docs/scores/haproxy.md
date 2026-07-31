@@ -64,7 +64,7 @@ go run ./cmd/ironctl scan docker.io/library/haproxy:latest
 
 Maintain **haproxy** (or run it)? Show its default-config isolation score with a badge that links back to this scorecard:
 
-[![Container Isolation Score: 63/100 C](https://img.shields.io/badge/container%20isolation-63%2F100%20C-d4a72c)](https://ironsecco.github.io/ironclaw/scores/haproxy/)
+[![Container Isolation Score: 59/100 C](https://img.shields.io/badge/container%20isolation-59%2F100%20C-yellow)](https://ironsecco.github.io/ironclaw/scores/haproxy/)
 
 ```markdown
 [![Container Isolation Score: 59/100 C](https://img.shields.io/badge/container%20isolation-59%2F100%20C-yellow)](https://ironsecco.github.io/ironclaw/scores/haproxy/)
