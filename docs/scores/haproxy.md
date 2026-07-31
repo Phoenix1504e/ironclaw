@@ -1,46 +1,46 @@
 ---
 title: "haproxy:3.1-alpine container isolation score: 63/100 (grade C)"
-description: "How isolated is haproxy:3.1-alpine by default? IronClaw scores its sandbox posture 63/100 (C): retains default capabilities. Scan any container in 10s."
+description: "How isolated is haproxy:3.1-alpine by default? IronClaw scores its sandbox posture 63/100 (C): runs as non-root, but retains default capabilities and a writable rootfs. Scan any container in 10s."
 ---
 
 # haproxy:3.1-alpine container isolation score: 63/100 (grade C)
 
-Run with plain `docker run haproxy:3.1-alpine` defaults, no hardening flags, the **haproxy** image scores **63/100, grade C (partial)** on IronClaw's seven-dimension container containment scale. Higher is safer. This is what you get straight out of a copy-pasted `docker run`; the fixes below close the gap.
+Run with plain `docker run haproxy:3.1-alpine` defaults, no hardening flags, the **HAProxy** image (`sha256:475863a3...`) scores **63/100, grade C (weak, fix the FAILs)** on IronClaw's seven-dimension container containment scale. Higher is safer. This is what you get straight out of a copy-pasted `docker run`; the fixes below close the gap.
 
-> Graded from a read-only `docker inspect` of `haproxy:3.1-alpine` at digest `sha256:475863a372c92c3dab3d59eafbbf8019dceebcd0c456594551b160ecdba4bdb9`. No workload is executed. [How scoring works &rarr;](../scan.md)
+> Graded from a running container scan of `haproxy:3.1-alpine`. No workload is executed. [How scoring works &rarr;](../scan.md)
 
 ## How it scores, dimension by dimension
 
 | Dimension | Verdict | Score | What the scan found |
 |-----------|:-------:|------:|---------------------|
 | Non-root user (uid != 0) | ✅ PASS | 15/15 | runs as haproxy (uid != 0) |
-| Dropped capabilities | ❌ FAIL | 4/20 | default capability set retained (includes CAP_NET_RAW, CAP_MKNOD, …) |
+| Dropped capabilities | ⚠️ WARN | 4/20 | default capability set retained (includes CAP_NET_RAW, CAP_MKNOD, …) |
 | Seccomp profile | ✅ PASS | 15/15 | seccomp profile active (syscall surface filtered) |
-| Network isolation / egress | ⚠️ WARN | 4/15 | network=bridge: outbound egress is possible; prefer network=none |
-| Read-only root filesystem | ❌ FAIL | 0/10 | root filesystem is writable: tamper/persistence surface |
-| No docker.sock exposure | ✅ PASS | 15/15 | no docker.sock / OCI control socket mounted |
+| Network isolation / egress | ⚠️ WARN | 4/15 | standard bridge network mode reported |
+| Read-only root filesystem | ⚠️ WARN | 5/15 | root filesystem is writable: tamper/persistence surface |
+| Privilege escalation | ⚠️ WARN | 5/10 | no explicitly enforced no-new-privileges |
 | No shared host namespaces | ✅ PASS | 10/10 | no host PID/IPC/network namespace sharing |
 
 ## Harden it: the highest-value fixes
 
 Applying these to your `docker run haproxy` closes the biggest gaps first (most points recovered first):
 
-- **Dropped capabilities**, `--cap-drop=ALL`  
-  Drop every Linux capability; add back only what the workload provably needs.
-- **Network isolation / egress**, `--network=none`  
-  Cut egress so a compromised workload cannot reach the network or exfiltrate.
-- **Read-only root filesystem**, `--read-only --tmpfs /tmp`  
+- **Dropped capabilities (+16 pts)**, `--cap-drop=ALL --cap-add=NET_BIND_SERVICE`  
+  Drop every Linux capability; add back only `NET_BIND_SERVICE` if binding ports < 1024 (e.g., 80/443).
+- **Read-only root filesystem (+10 pts)**, `--read-only --tmpfs /tmp --tmpfs /var/run`  
   Make the root filesystem read-only to remove the tamper/persistence surface.
 
-A fully hardened run scores **100/100 (grade A)**:
+A fully hardened run scores **89/100 (grade B)** (network proxy functionality requires active network access):
 
 ```bash
 docker run -d --name haproxy-hardened \
-  --user 65532:65532 \
+  --user 99:99 \
   --cap-drop=ALL \
-  --security-opt=no-new-privileges \
-  --read-only --tmpfs /tmp \
-  --network=none \
+  --cap-add=NET_BIND_SERVICE \
+  --security-opt=no-new-privileges:true \
+  --read-only \
+  --tmpfs /tmp \
+  --tmpfs /var/run \
   haproxy:3.1-alpine
 ```
 
@@ -53,7 +53,7 @@ These grades come from `ironctl scan`, a single, credential-free command that au
 brew install ironsecco/ironclaw/ironclaw
 
 # grade your own haproxy the same way this page was generated
-ironctl scan my-haproxy
+go run ./cmd/ironctl scan docker.io/library/haproxy:latest
 ```
 
 - [Scan any container &rarr;](../scan.md), the full command reference.
@@ -65,10 +65,10 @@ ironctl scan my-haproxy
 
 Maintain **haproxy** (or run it)? Show its default-config isolation score with a badge that links back to this scorecard:
 
-[![Container Isolation Score: 63/100 C](https://img.shields.io/badge/container%20isolation-63%2F100%20C-d4a72c)](https://ironsecco.github.io/ironclaw/scores/haproxy/)
+[![Container Isolation Score: 63/100 C](https://img.shields.io/badge/container%20isolation-63%2F100%20C-yellow)](https://ironsecco.github.io/ironclaw/scores/haproxy/)
 
 ```markdown
-[![Container Isolation Score: 63/100 C](https://img.shields.io/badge/container%20isolation-63%2F100%20C-d4a72c)](https://ironsecco.github.io/ironclaw/scores/haproxy/)
+[![Container Isolation Score: 59/100 C](https://img.shields.io/badge/container%20isolation-59%2F100%20C-yellow)](https://ironsecco.github.io/ironclaw/scores/haproxy/)
 ```
 
 The badge is a plain [shields.io](https://shields.io) URL: no server, no build step, nothing to host. It reflects this page's default-configuration grade. Hardened your own deployment? Generate a live badge of *your* config with [`ironctl scan --badge-json`](../blog/add-a-sandbox-isolation-score-badge-to-your-repo.md), or compare every image on the [leaderboard](leaderboard.md).
