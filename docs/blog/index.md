@@ -104,6 +104,8 @@ image we have graded, with its default and hardened score in one table.
 - [How to scan a Dockerfile for security issues](scan-a-dockerfile-for-security-issues.md) -
   a deliberately bad Dockerfile (root default, unpinned base, a baked-in secret) scores 5 of
   100 (F) on a static, daemon-free scan. The exact one-line fixes take it to 100 of 100 (A).
+- [How to harden a HAProxy container](harden-haproxy-container-isolation.md) -
+  `haproxy:latest` already runs non-root, so it starts at 59 of 100 (C). Dropped capabilities and a read-only rootfs take the edge load balancer to its honest 89 of 100 (B) ceiling.
 
 ## Comparisons
 
